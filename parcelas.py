@@ -2,13 +2,10 @@ from tkinter import *
 from tkinter import messagebox
 from scipy.optimize import linprog
 from tkinter.filedialog import askopenfilename
-from simplex import Simplex
+import pulp
+from scipy.stats import randint_gen
 
 
-#------------------------------------------------------------------------------------------------------------------
-
-
-#-----------------------------------------------------------------------------------------------------------------
 class Optimizador:
 
     mensajeArchivo = "" #Texto contenido en el archivo
@@ -17,7 +14,21 @@ class Optimizador:
     dmax = 0            #Duracion maxima de cosecha (Suma de duraciones de cada parcela)
     utilidades = []     #Utilidades de cada cosecha en cada instante de tiempo
     flag = False        #Bandera para ver si el archivo fue leido exitosamente
-    y = []
+    y = []              #Instante donde empieza cosecha parcela 'i'  ((Variable de decision))
+    x = []              #1 si se siembra en la parcela 'i', 0 si no  ((Variable de decision))
+    z = []              #Variables z que sirven para restringir con ayudita del BigM
+    listaX = []         #Variables Xij en lista
+    listaUtilidades = []#Utilidades en lista
+    bigM = 0
+    model = pulp.LpProblem("Maximizar parcelas", pulp.LpMaximize)
+
+
+    def pulpSolution(self):
+        model = pulp.LpProblem("Profit maximising problem", pulp.LpMaximize)
+
+        #Definición de variables
+        U = pulp.LpVariable('U', lowBound=0, cat='Integer')
+        X = pulp.LpVariable('X', lowBound=0, upBound=1, cat='Integer')
 
     def abrirArchivo(self):
         name = askopenfilename(initialdir="",
@@ -32,31 +43,107 @@ class Optimizador:
                     if (i == 0):
                         self.cant = int(linea)
                     if (i == 1):
-                        self.d = linea.split()
+                        self.d = (linea.split())
                     if (i == 2):
                         self.dmax = int(linea)
                     if (i > 2):
-                        self.utilidades.append(linea.split())
+                        line = linea.split()
+                        line =[int(numero) for numero in line]
+                        self.utilidades.append(line)
+
+                        for numero in line:
+                            self.listaUtilidades.append(numero)
+
                     i += 1
                 myFile.seek(0)
                 self.mensajeArchivo = myFile.read()
                 # Obtiene lo que está en el archivo
                 myFile.close()
+                # cast string into integer
+                self.d = [int(numero) for numero in self.d]
                 self.flag = True
+                print(self.utilidades)
 
         except:
             self.flag = False
 
+    def definirY(self):
+        # Se crea lista para la variable Yi
+        for i in range(1, (self.cant + 1)):
+            label = 'y' + str(i)
+            self.y.append(pulp.LpVariable(label, lowBound=0, cat='Integer'))
+
+
+    def definirZ(self):
+        # Se crea lista para la variable Yi
+        for i in range(1, (self.cant + 1)):
+            label = 'z' + str(i)
+            self.z.append(pulp.LpVariable(label, lowBound=0, cat='Integer'))
+
+    def definirX(self):
+        # Se crea matriz para la variable Xij
+        for i in range(1, (self.cant + 1)):
+            lista = []
+            for j in range (1 ,self.dmax):
+                label = 'x' + str(i) + str(j)
+                varAux = pulp.LpVariable(label, lowBound=0, upBound=1, cat='Integer')
+                lista.append(varAux)
+                self.listaX.append(varAux)
+            self.x.append(lista)
+
+    def definirFuncObjetivo(self):
+        self.model += pulp.lpDot(self.listaUtilidades, self.listaX)
+
+    def agregarRestricciones(self):
+
+        #Restricción 1 Se recorre la matriz x por filas
+        for i in range (0,self.cant):
+            j=0
+            lista = []
+            while(j <= self.dmax):
+                lista.append(self.x[i][j])
+                j+=1
+            self.model += pulp.lpSum(lista) == 1
+
+        # Restricción 2 Se recorre la matriz x por columnas
+        for j in range (0,self.cant):
+            i=0
+            lista = []
+            while(i <= self.dmax):
+                lista.append(self.x[i][j])
+                i+=1
+            self.model += pulp.lpSum(lista) <= 1
+
+        #Restricción 3
+        for i in range(0,self.cant):
+            self.model += self.y[i]+ self.d[i] -1 <= self.dmax
+
+        # Restriccion 4 Las de Y de todas con todas papeeeeee
+        contadorZ = 0
+        for i in range (0,self.cant):
+            contador = 0
+            while(contador < self.cant):
+                if(contador == i):
+                    contador +=1
+                else:
+                    self.model += self.y[i] + self.d[i] -1 < self.y[contador] + self.bigM * (1 - self.z[contadorZ])
+                    contadorZ+=1
+                    contador += 1
 
     def optimizar(self):
-    
-        c = [-1, 4]
-        A = [[-3, 1], [1, 2]]
-        b = [6, 4]
-        x0_bnds = (None, None)
-        x1_bnds = (-3, None)
-        res = linprog(c, A, b, bounds=(x0_bnds, x1_bnds))
-        return res
+
+        self.definirX()
+        self.definirY()
+        self.definirZ()
+        self.definirFuncObjetivo()     #Se añade la función objetivo al modelo
+
+        #Se agregan las restricciones
+        self.agregarRestricciones()
+        self.model.solve()
+        pulp.LpStatus[self.model.status]
+        print(pulp.value(self.model.objective))
+        print("Después del todo")
+
 
 
 class Interfaz:
@@ -111,7 +198,7 @@ class Interfaz:
 
     def correr(self):
         #if(self.optimizador.flag):
-        self.insertar_texto(self.optimizador.optimizar())
+        self.optimizador.optimizar()
         #else:
             #messagebox.showinfo("Alerta", "Archvo no cargado")
 
