@@ -84,7 +84,7 @@ class Optimizador:
         # Se crea matriz para la variable Xij
         for i in range(1, (self.cant + 1)):
             lista = []
-            for j in range (1 ,self.dmax):
+            for j in range (1 ,self.dmax+1):
                 label = 'x' + str(i) + str(j)
                 varAux = pulp.LpVariable(label, lowBound=0, upBound=1, cat='Integer')
                 lista.append(varAux)
