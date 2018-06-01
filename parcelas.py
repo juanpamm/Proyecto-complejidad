@@ -1,10 +1,7 @@
 from tkinter import *
 from tkinter import messagebox
-from scipy.optimize import linprog
 from tkinter.filedialog import askopenfilename
 import pulp
-from scipy.stats import randint_gen
-
 
 class Optimizador:
 
@@ -100,16 +97,16 @@ class Optimizador:
         for i in range (0,self.cant):
             j=0
             lista = []
-            while(j <= self.dmax):
+            while(j < self.dmax):
                 lista.append(self.x[i][j])
                 j+=1
             self.model += pulp.lpSum(lista) == 1
 
         # Restricción 2 Se recorre la matriz x por columnas
-        for j in range (0,self.cant):
+        for j in range (0,self.dmax):
             i=0
             lista = []
-            while(i <= self.dmax):
+            while(i < self.cant):
                 lista.append(self.x[i][j])
                 i+=1
             self.model += pulp.lpSum(lista) <= 1
