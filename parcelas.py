@@ -121,10 +121,10 @@ class Optimizador:
             contador = 0
             while(contador < self.cant):
                 if(contador == i):
-                    contador +=1
+                    contador += 1
                 else:
-                    self.model += self.y[i] + self.d[i] -1 < self.y[contador] + self.bigM * (1 - self.z[contadorZ])
-                    contadorZ+=1
+                    self.model += self.y[i] + self.d[i] <= self.y[contador] + self.bigM * (1 - self.z[contadorZ])
+                    contadorZ += 1
                     contador += 1
 
     def optimizar(self):
