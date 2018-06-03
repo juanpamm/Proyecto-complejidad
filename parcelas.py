@@ -23,7 +23,7 @@ class Optimizador:
     def pulpSolution(self):
         model = pulp.LpProblem("Profit maximising problem", pulp.LpMaximize)
 
-        #Definición de variables
+        # Definición de variables
         U = pulp.LpVariable('U', lowBound=0, cat='Integer')
         X = pulp.LpVariable('X', lowBound=0, upBound=1, cat='Integer')
 
@@ -37,15 +37,15 @@ class Optimizador:
             with open(name, 'r') as myFile:
                 i = 0
                 for linea in myFile:
-                    if (i == 0):
+                    if i == 0:
                         self.cant = int(linea)
-                    if (i == 1):
+                    if i == 1:
                         self.d = (linea.split())
-                    if (i == 2):
+                    if i == 2:
                         self.dmax = int(linea)
-                    if (i > 2):
+                    if i > 2:
                         line = linea.split()
-                        line =[int(numero) for numero in line]
+                        line = [int(numero) for numero in line]
                         self.utilidades.append(line)
 
                         for numero in line:
@@ -73,7 +73,7 @@ class Optimizador:
 
     def definirZ(self):
         # Se crea lista para la variable Yi
-        for i in range(1, (self.cant + 1)):
+        for i in range(1, ((len(self.y) * (len(self.y) - 1)) + 1)):
             label = 'z' + str(i)
             self.z.append(pulp.LpVariable(label, lowBound=0, cat='Integer'))
 
@@ -81,11 +81,11 @@ class Optimizador:
         # Se crea matriz para la variable Xij
         for i in range(1, (self.cant + 1)):
             lista = []
-            for j in range (1 ,self.dmax+1):
+            for j in range(1, self.dmax+1):
                 label = 'x' + str(i) + str(j)
-                varAux = pulp.LpVariable(label, lowBound=0, upBound=1, cat='Integer')
-                lista.append(varAux)
-                self.listaX.append(varAux)
+                var_aux = pulp.LpVariable(label, lowBound=0, upBound=1, cat='Integer')
+                lista.append(var_aux)
+                self.listaX.append(var_aux)
             self.x.append(lista)
 
     def definirFuncObjetivo(self):
@@ -93,11 +93,11 @@ class Optimizador:
 
     def agregarRestricciones(self):
 
-        #Restricción 1 Se recorre la matriz x por filas
+        # Restricción 1 Se recorre la matriz x por filas
         for i in range (0,self.cant):
             j=0
             lista = []
-            while(j < self.dmax):
+            while j < self.dmax:
                 lista.append(self.x[i][j])
                 j+=1
             self.model += pulp.lpSum(lista) == 1
@@ -106,40 +106,45 @@ class Optimizador:
         for j in range (0,self.dmax):
             i=0
             lista = []
-            while(i < self.cant):
+            while i < self.cant:
                 lista.append(self.x[i][j])
                 i+=1
             self.model += pulp.lpSum(lista) <= 1
 
-        #Restricción 3
-        for i in range(0,self.cant):
-            self.model += self.y[i]+ self.d[i] -1 <= self.dmax
+        # Restricción 3
+        for i in range(0, self.cant):
+            self.model += self.y[i] + self.d[i] - 1 <= self.dmax
 
         # Restriccion 4 Las de Y de todas con todas papeeeeee
-        contadorZ = 0
-        for i in range (0,self.cant):
+        contador_z = 0
+        for i in range(0, self.cant):
             contador = 0
-            while(contador < self.cant):
-                if(contador == i):
+            while contador < self.cant:
+                if contador == i:
                     contador += 1
                 else:
-                    self.model += self.y[i] + self.d[i] <= self.y[contador] + self.bigM * (1 - self.z[contadorZ])
-                    contadorZ += 1
+                    self.model += self.y[i] + self.d[i] <= self.y[contador] + self.bigM * (1 - self.z[contador_z])
+                    contador_z += 1
                     contador += 1
 
     def optimizar(self):
 
+
         self.definirX()
         self.definirY()
         self.definirZ()
-        self.definirFuncObjetivo()     #Se añade la función objetivo al modelo
+        self.definirFuncObjetivo()     # Se añade la función objetivo al modelo
+        # print("Este es el tamaño de y: " + str(len(self.y)))
+        # print("Este es el tamaño de z: " + str(len(self.z)))
 
-        #Se agregan las restricciones
+        # Se agregan las restricciones
         self.agregarRestricciones()
+
         self.model.solve()
         pulp.LpStatus[self.model.status]
         print(pulp.value(self.model.objective))
         print("Después del todo")
+
 
 
 
