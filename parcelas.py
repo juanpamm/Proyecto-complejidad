@@ -140,6 +140,13 @@ class Optimizador:
                     self.matriz_z[i][j] = 0
                     self.matriz_z[j][i] = 0
 
+        for i in range (0, self.cant):
+            listica = []
+            for j in range (0, self.dmax):
+                listica.append(self.x[i][j] * (j + 1))
+            self.model += self.y[i] == pulp.lpSum(listica)
+
+
     def optimizar(self):
 
         self.definir_matriz_z()
@@ -154,8 +161,9 @@ class Optimizador:
         self.agregarRestricciones()
 
         self.model.solve()
-        pulp.LpStatus[self.model.status]
+        print(pulp.LpStatus[self.model.status])
         print(pulp.value(self.model.objective))
+        print(self.model.constraints)
 
         for v in self.model.variables():
             if v.name.find("x") != -1:
