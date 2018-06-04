@@ -5,18 +5,19 @@ import pulp
 
 class Optimizador:
 
-    mensajeArchivo = "" #Texto contenido en el archivo
-    cant = 0            #Cantidad de parcelas
-    d = []              #Duracion de cosechar en la parcela i
-    dmax = 0            #Duracion maxima de cosecha (Suma de duraciones de cada parcela)
-    utilidades = []     #Utilidades de cada cosecha en cada instante de tiempo
-    flag = False        #Bandera para ver si el archivo fue leido exitosamente
-    y = []              #Instante donde empieza cosecha parcela 'i'  ((Variable de decision))
-    x = []              #1 si se siembra en la parcela 'i', 0 si no  ((Variable de decision))
-    z = []              #Variables z que sirven para restringir con ayudita del BigM
-    listaX = []         #Variables Xij en lista
-    listaUtilidades = []#Utilidades en lista
-    bigM = 0
+    mensajeArchivo = ""   # Texto contenido en el archivo
+    cant = 0              # Cantidad de parcelas
+    d = []                # Duracion de cosechar en la parcela i
+    dmax = 0              # Duracion maxima de cosecha (Suma de duraciones de cada parcela)
+    utilidades = []       # Utilidades de cada cosecha en cada instante de tiempo
+    flag = False          # Bandera para ver si el archivo fue leido exitosamente
+    y = []                # Instante donde empieza cosecha parcela 'i'  ((Variable de decision))
+    x = []                # 1 si se siembra en la parcela 'i', 0 si no  ((Variable de decision))
+    z = []                # Variables z que sirven para restringir con ayudita del BigM
+    listaX = []           # Variables Xij en lista
+    listaUtilidades = []  # Utilidades en lista
+    matriz_z = []         # Matriz que contiene las variables z
+    bigM = 1000000
     model = pulp.LpProblem("Maximizar parcelas", pulp.LpMaximize)
 
 
@@ -64,6 +65,9 @@ class Optimizador:
         except:
             self.flag = False
 
+    def definir_matriz_z(self):
+        self.matriz_z = [[0 for x in range(self.cant)] for y in range(self.cant)]
+
     def definirY(self):
         # Se crea lista para la variable Yi
         for i in range(1, (self.cant + 1)):
@@ -94,12 +98,12 @@ class Optimizador:
     def agregarRestricciones(self):
 
         # Restricción 1 Se recorre la matriz x por filas
-        for i in range (0,self.cant):
-            j=0
+        for i in range(0, self.cant):
+            j = 0
             lista = []
             while j < self.dmax:
                 lista.append(self.x[i][j])
-                j+=1
+                j += 1
             self.model += pulp.lpSum(lista) == 1
 
         # Restricción 2 Se recorre la matriz x por columnas
@@ -108,7 +112,7 @@ class Optimizador:
             lista = []
             while i < self.cant:
                 lista.append(self.x[i][j])
-                i+=1
+                i += 1
             self.model += pulp.lpSum(lista) <= 1
 
         # Restricción 3
@@ -124,12 +128,21 @@ class Optimizador:
                     contador += 1
                 else:
                     self.model += self.y[i] + self.d[i] <= self.y[contador] + self.bigM * (1 - self.z[contador_z])
+                    self.matriz_z[i][contador] = self.z[contador_z]
                     contador_z += 1
                     contador += 1
 
+        # Restricción 5 Restricciones para las variables Z
+        for i in range(0, self.cant):
+            for j in range(0, self.cant):
+                if self.matriz_z[i][j] != 0:
+                    self.model += self.matriz_z[i][j] + self.matriz_z[j][i] == 1
+                    self.matriz_z[i][j] = 0
+                    self.matriz_z[j][i] = 0
+
     def optimizar(self):
 
-
+        self.definir_matriz_z()
         self.definirX()
         self.definirY()
         self.definirZ()
@@ -143,8 +156,16 @@ class Optimizador:
         self.model.solve()
         pulp.LpStatus[self.model.status]
         print(pulp.value(self.model.objective))
-        print("Después del todo")
 
+        for v in self.model.variables():
+            if v.name.find("x") != -1:
+                print(v.name, "=", v.varValue)
+
+        for v in self.model.variables():
+            if v.name.find("y") != -1:
+                print(v.name, "=", v.varValue)
+
+        print("Después del todo")
 
 
 
