@@ -161,19 +161,23 @@ class Optimizador:
         self.agregarRestricciones()
 
         self.model.solve()
-        print(pulp.LpStatus[self.model.status])
-        print(pulp.value(self.model.objective))
-        print(self.model.constraints)
+        #print(pulp.LpStatus[self.model.status])
+        #print(self.model.constraints)
 
-        for v in self.model.variables():
+        '''for v in self.model.variables():
             if v.name.find("x") != -1:
-                print(v.name, "=", v.varValue)
+                print(v.name, "=", v.varValue)'''
+
+        resultado = "Utilidad: "
+
+        resultado += str(pulp.value(self.model.objective)) + "\n"
 
         for v in self.model.variables():
-            if v.name.find("y") != -1:
-                print(v.name, "=", v.varValue)
 
-        print("Después del todo")
+            if v.name.find("y") != -1:
+                resultado += v.name + " = " + str(v.varValue) + "\n"
+
+        return resultado
 
 
 
@@ -228,10 +232,12 @@ class Interfaz:
             messagebox.showinfo("Alerta", "Error al cargar archivo")
 
     def correr(self):
-        #if(self.optimizador.flag):
-        self.optimizador.optimizar()
-        #else:
-            #messagebox.showinfo("Alerta", "Archvo no cargado")
+        if(self.optimizador.flag):
+            mensaje = "\n\nResultado del Optimizador:\n\n"
+            mensaje += self.optimizador.optimizar()
+            self.insertar_texto(mensaje)
+        else:
+            messagebox.showinfo("Alerta", "Archvo no cargado")
 
 
     # Se inserta un texto dado en el TEXT
